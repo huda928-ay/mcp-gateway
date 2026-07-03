@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Gateway Dashboard</title>
+    <!-- Şık kartlar ve modern bir arayüz için Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-10 text-center">
+            <h1 class="text-4xl font-extrabold text-indigo-400 tracking-tight">MCP Gateway Dashboard</h1>
+            <p class="text-gray-400 mt-2">Sunucu durumlarını canlı izleyin ve yönetim paneli üzerinden güncelleyin.</p>
+        </header>
+
+        <!-- Kartların (Card Component) listeleneceği ana grid alanı -->
+        <div id="servers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <p class="text-center col-span-full text-gray-500 animate-pulse">Sunucular yükleniyor...</p>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api/mcp-servers';
+
+        // Sayfa ilk yüklendiğinde ve her 4 saniyede bir verileri günceller
+        async function fetchServers() {
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Sunucu verileri alınamadı');
+                const servers = await response.json();
+                renderServers(servers);
+            } catch (error) {
+                console.error('Hata:', error);
+            }
+        }
+
+        // Sunucu listesini alıp HTML kartlarına dönüştüren fonksiyon
+        function renderServers(servers) {
+            const grid = document.getElementById('servers-grid');
+            
+            // Eğer şu an açık bir düzenleme formu varsa, listenin yenilenmesi kullanıcının yazdığı yazıyı silmesin diye koruma sağlıyoruz
+            const activeInputs = document.querySelectorAll('div[id^="edit-form-"]:not(.hidden)');
+            if (activeInputs.length > 0) {
+                return; // Eğer kullanıcı o an bir şey düzenliyorsa kartları baştan çizme, rahat rahat yazsın
+            }
+
+            grid.innerHTML = ''; 
+
+            servers.forEach(server => {
+                const isUp = server.status === 'UP';
+                const statusColor = isUp ? 'bg-green-500' : 'bg-red-500';
+                const statusText = server.status || 'UNKNOWN';
+                const lastCheckedStr = server.lastChecked ? new Date(server.lastChecked).toLocaleTimeString() : 'Kontrol edilmedi';
+
+                const card = document.createElement('div');
+                card.className = `bg-gray-800 rounded-xl p-6 shadow-lg border-t-4 ${isUp ? 'border-green-500' : 'border-red-500'} flex flex-col justify-between transition-all duration-300 hover:scale-105`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-white">Sunucu #${server.id}</h3>
+                            <span class="flex items-center text-sm font-semibold px-2.5 py-0.5 rounded-full ${isUp ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}">
+                                <span class="w-2 h-2 rounded-full ${statusColor} mr-2"></span>
+                                ${statusText}
+                            </span>
+                        </div>
+                        
+                        <div class="space-y-2 text-sm text-gray-300">
+                            <p><span class="text-gray-500 font-medium">Mevcut URL:</span> <br><code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded break-all">${server.endpointUrl || 'Boş'}</code></p>
+                            <p><span class="text-gray-500 font-medium">Son Kontrol:</span> ${lastCheckedStr}</p>
+                        </div>
+                    </div>
+
+                    <!-- Düzenleme Alanı -->
+                    <div class="mt-6 pt-4 border-t border-gray-700">
+                        <!-- ID eşleşmesi hatasız hale getirildi -->
+                        <button onclick="toggleEdit(${server.id})" id="edit-btn-${server.id}" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition text-sm">
+                            Düzenle
+                        </button>
+                        
+                        <div id="edit-form-${server.id}" class="hidden mt-3 space-y-2">
+                            <input type="text" id="input-${server.id}" value="${server.endpointUrl || ''}" 
+                                   class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                            <div class="flex gap-2">
+                                <button onclick="saveUrl(${server.id})" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition">
+                                    Kaydet
+                                </button>
+                                <button onclick="toggleEdit(${server.id})" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition">
+                                    İptal
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Düzenle formunu açıp kapatan fonksiyon (Buton görünürlüğünü kesinleştirildi)
+        function toggleEdit(id) {
+            const form = document.getElementById(`edit-form-${id}`);
+            const btn = document.getElementById(`edit-btn-${id}`);
+            
+            if (form && btn) {
+                form.classList.toggle('hidden');
+                btn.classList.toggle('hidden');
+            }
+        }
+
+        // Yeni URL'i backend'e gönderen asenkron fonksiyon
+        async function saveUrl(id) {
+            const input = document.getElementById(`input-${id}`);
+            const newUrl = input.value.trim();
+
+            if (!newUrl) {
+                alert('Lütfen geçerli bir URL girin!');
+                return;
+            }
+
+            try {
+                // Sayfa yenilenmeden backend API (PUT) isteği atılıyor
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpointUrl: newUrl })
+                });
+
+                if (response.ok) {
+                    // Formu kapat, DOM'u zorla temizle ve yeni verileri çek
+                    toggleEdit(id);
+                    await fetchServers();
+                } else {
+                    alert('Güncelleme başarısız oldu! (HTTP ' + response.status + ')');
+                }
+            } catch (error) {
+                console.error('Güncelleme hatası:', error);
+                alert('Ağ hatası oluştu!');
+            }
+        }
+
+        // Sayfa açıldığında ilk verileri yükle
+        fetchServers();
+        
+        // Her 4 saniyede bir arka planda durumları kontrol et
+        setInterval(fetchServers, 4000);
+    </script>
+</body>
+</html>
