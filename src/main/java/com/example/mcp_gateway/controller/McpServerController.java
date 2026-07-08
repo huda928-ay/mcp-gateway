@@ -2,6 +2,7 @@ package com.example.mcp_gateway.controller;
 
 import com.example.mcp_gateway.model.McpServerConfig;
 import com.example.mcp_gateway.service.McpServerService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,5 +42,19 @@ public class McpServerController {
         
         McpServerConfig updatedServer = service.updateServerUrl(id, newUrl);
         return ResponseEntity.ok(updatedServer); // Güncellenmiş yeni halini HTTP 200 ile geri dön
+    }
+
+    // Görev 3: POST /api/mcp-servers -> Yeni bir MCP sunucusu ekler
+    @PostMapping
+    public ResponseEntity<McpServerConfig> createServer(@RequestBody McpServerConfig serverConfig) {
+        // Gelen istekte URL kontrolü yapıyoruz
+        if (serverConfig.getEndpointUrl() == null || serverConfig.getEndpointUrl().isBlank()) {
+            return ResponseEntity.badRequest().build(); // URL yoksa HTTP 400 Bad Request dön
+        }
+
+        McpServerConfig createdServer = service.createServer(serverConfig);
+        
+        // Yeni bir kaynak oluşturulduğu için HTTP 201 Created kodu ile yanıt dönüyoruz
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdServer);
     }
 }

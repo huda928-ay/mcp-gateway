@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP Gateway Dashboard</title>
-    <!-- Şık kartlar ve modern bir arayüz için Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-8">
@@ -15,16 +14,130 @@
             <p class="text-gray-400 mt-2">Sunucu durumlarını canlı izleyin ve yönetim paneli üzerinden güncelleyin.</p>
         </header>
 
-        <!-- Kartların (Card Component) listeleneceği ana grid alanı -->
-        <div id="servers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="bg-gray-800 rounded-xl p-6 shadow-lg mb-8 border border-gray-700">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span class="w-2 h-5 bg-emerald-500 rounded-full"></span>
+                        🌿 Ajantik İş Akışı Görselleştirme Paneli
+                    </h2>
+                    <p class="text-sm text-gray-400 mt-1">Veritabanındaki sıralı ajan adımlarını ve canlı çalışma durumlarını takip edin.</p>
+                </div>
+                <button id="run-workflow-btn" onclick="runLiveWorkflowSimulation()" disabled
+                        class="bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-lg transition text-sm cursor-pointer shadow-md shadow-emerald-900/30 flex items-center gap-2">
+                    ▶️ Akışı Çalıştır
+                </button>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Aktif İş Akışı Şeması Seçin</label>
+                <select id="workflow-selector" onchange="loadSelectedWorkflow()" 
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2.5 text-sm text-gray-200 focus:outline-none focus:border-indigo-500">
+                    <option value="">İş akışları yükleniyor...</option>
+                </select>
+            </div>
+
+            <div id="workflow-canvas" class="w-full min-h-[180px] bg-gray-900 rounded-xl p-6 border border-gray-700 flex flex-col md:flex-row items-center justify-center gap-4 overflow-x-auto">
+                <p class="text-gray-500 text-sm animate-pulse">Görsel şemayı çizdirmek için yukarıdan bir iş akışı seçin.</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 shadow-lg mb-8 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span class="w-2 h-5 bg-indigo-500 rounded-full"></span>
+                🏗️ Yeni Ajantik İş Akışı Tasarla
+            </h2>
+            <form id="create-workflow-form" onsubmit="createNewWorkflow(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">İş Akışı Adı</label>
+                    <input type="text" id="workflow-name-input" required placeholder="Örn: Kritik Altyapı Otonom Ölçeklendirme Akışı" 
+                           class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1.5">Sıralı Ajan Adımları</label>
+                    <div id="dynamic-steps-container" class="space-y-2">
+                        <div class="flex gap-2 step-row">
+                            <span class="bg-gray-900 text-gray-400 border border-gray-700 px-3 py-2 rounded-lg text-sm font-bold flex items-center justify-center min-w-[40px]">1</span>
+                            <input type="text" required placeholder="Örn: Grafana üzerinden sistemin anlık CPU durumunu analiz et." 
+                                   class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 workflow-step-input">
+                            <button type="button" onclick="removeStepRow(this)" class="bg-red-900/20 hover:bg-red-900/40 text-red-400 font-bold px-3.5 rounded-lg text-sm transition cursor-pointer">✕</button>
+                        </div>
+                    </div>
+                    
+                    <button type="button" onclick="addNewStepRow()" class="mt-3 text-xs bg-gray-700 hover:bg-gray-600 text-indigo-300 font-semibold py-1.5 px-3 rounded-lg transition cursor-pointer">
+                        ＋ Yeni Adım Ekle
+                    </button>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 px-4 rounded-lg transition text-sm cursor-pointer shadow-md shadow-indigo-900/30">
+                        💾 İş Akışını Veritabanına Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-6 shadow-lg mb-8 border border-gray-700">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <span class="w-2 h-5 bg-indigo-500 rounded-full"></span>
+                Yeni MCP Sunucusu Ekle
+            </h2>
+            <form id="create-server-form" onsubmit="createServer(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div>
+                    <input type="text" id="create-name" required placeholder="Örn: Mock Sunucu" 
+                           class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <input type="url" id="create-url" required placeholder="https://httpbin.org/status/200" 
+                           class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-lg transition text-sm cursor-pointer shadow-md shadow-indigo-900/30">
+                        ＋ Sunucuyu Kaydet
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="servers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             <p class="text-center col-span-full text-gray-500 animate-pulse">Sunucular yükleniyor...</p>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl shadow-lg border border-gray-700 overflow-hidden flex flex-col h-[500px]">
+            <div class="bg-gray-950 px-6 py-4 border-b border-gray-700 flex items-center gap-3">
+                <div class="w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
+                <h2 class="text-lg font-bold text-indigo-400">🤖 MCP Gateway Akıllı Ajan Paneli</h2>
+                <span class="text-xs text-gray-500 ml-auto">LangChain4j Engine</span>
+            </div>
+
+            <div id="chat-box" class="flex-1 p-6 overflow-y-auto space-y-4 bg-gray-900/40">
+                <div class="flex items-start gap-3 max-w-[80%]">
+                    <div class="bg-gray-700 text-gray-100 rounded-xl rounded-tl-none px-4 py-2.5 text-sm shadow-md">
+                        Merhaba! Ben sistemdeki aktif MCP araçlarını (Kubernetes, Grafana vb.) doğrudan kontrol edebilen yapay zeka ajanıyım. Bana doğal dille talimatlar verebilirsin.
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-gray-950 border-t border-gray-700 flex gap-3">
+                <input type="text" id="user-input" onkeypress="handleChatKeyPress(event)"
+                       placeholder="MCP sunucularına iletilecek doğal dil sorgusunu yazın..." 
+                       class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 placeholder-gray-500">
+                <button onclick="sendAgentMessage()" 
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-3 rounded-lg transition text-sm cursor-pointer shadow-md shadow-indigo-900/30">
+                    Sorgula
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
         const API_URL = '/api/mcp-servers';
+        const AGENT_API_URL = '/api/agent/query';
+        const WORKFLOWS_API_URL = '/api/workflows';
 
-        // Sayfa ilk yüklendiğinde ve her 4 saniyede bir verileri günceller
+        let currentActiveSteps = [];
+
         async function fetchServers() {
             try {
                 const response = await fetch(API_URL);
@@ -36,23 +149,220 @@
             }
         }
 
-        // Sunucu listesini alıp HTML kartlarına dönüştüren fonksiyon
+        async function fetchWorkflows() {
+            const selector = document.getElementById('workflow-selector');
+            try {
+                const response = await fetch(WORKFLOWS_API_URL);
+                if (!response.ok) throw new Error('İş akışları alınamadı');
+                const workflows = await response.json();
+                
+                selector.innerHTML = '<option value="">-- Lütfen Bir İş Akışı Şeması Seçin --</option>';
+                if (workflows.length === 0) {
+                    selector.innerHTML = '<option value="">Kayıtlı iş akışı bulunamadı.</option>';
+                    return;
+                }
+                
+                workflows.forEach(w => {
+                    const option = document.createElement('option');
+                    option.value = w.id;
+                    option.textContent = `${w.id} - ${w.workflowName} (${w.steps.length} Adım)`;
+                    option.dataset.steps = JSON.stringify(w.steps);
+                    selector.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Workflows yükleme hatası:', error);
+                selector.innerHTML = '<option value="">İş akışları yüklenirken hata oluştu!</option>';
+            }
+        }
+
+        function loadSelectedWorkflow() {
+            const selector = document.getElementById('workflow-selector');
+            const canvas = document.getElementById('workflow-canvas');
+            const runBtn = document.getElementById('run-workflow-btn');
+            
+            if (!selector.value) {
+                canvas.innerHTML = '<p class="text-gray-500 text-sm animate-pulse">Görsel şemayı çizdirmek için yukarıdan bir iş akışı seçin.</p>';
+                runBtn.disabled = true;
+                currentActiveSteps = [];
+                return;
+            }
+
+            const selectedOption = selector.options[selector.selectedIndex];
+            currentActiveSteps = JSON.parse(selectedOption.dataset.steps);
+            runBtn.disabled = false;
+
+            canvas.innerHTML = '';
+
+            currentActiveSteps.forEach((stepText, index) => {
+                const node = document.createElement('div');
+                node.id = `node-${index}`;
+                node.className = 'flex-1 min-w-[200px] max-w-[280px] bg-gray-800 border-2 border-gray-700 text-gray-300 rounded-xl p-4 shadow-md transition-all duration-500 text-xs font-medium flex flex-col justify-between h-24';
+                node.innerHTML = `
+                    <div class="text-indigo-400 font-bold uppercase tracking-wider text-[10px] mb-1">Adım #${index + 1}</div>
+                    <div class="line-clamp-3 text-gray-200">${stepText}</div>
+                `;
+                canvas.appendChild(node);
+
+                if (index < currentActiveSteps.length - 1) {
+                    const edge = document.createElement('div');
+                    edge.id = `edge-${index}`;
+                    edge.className = 'text-gray-600 text-xl font-bold rotate-90 md:rotate-0 transition-colors duration-500 my-1 md:my-0';
+                    edge.innerHTML = '➔';
+                    canvas.appendChild(edge);
+                }
+            });
+        }
+
+        async function runLiveWorkflowSimulation() {
+            const runBtn = document.getElementById('run-workflow-btn');
+            const selector = document.getElementById('workflow-selector');
+            
+            if (currentActiveSteps.length === 0) return;
+
+            runBtn.disabled = true;
+            selector.disabled = true;
+
+            for (let i = 0; i < currentActiveSteps.length; i++) {
+                document.getElementById(`node-${i}`).className = 'flex-1 min-w-[200px] max-w-[280px] bg-gray-800 border-2 border-gray-700 text-gray-300 rounded-xl p-4 shadow-md transition-all duration-500 text-xs font-medium flex flex-col justify-between h-24';
+                if (i < currentActiveSteps.length - 1) {
+                    document.getElementById(`edge-${i}`).className = 'text-gray-600 text-xl font-bold rotate-90 md:rotate-0 transition-colors duration-500 my-1 md:my-0';
+                }
+            }
+
+            for (let i = 0; i < currentActiveSteps.length; i++) {
+                const node = document.getElementById(`node-${i}`);
+                const stepText = currentActiveSteps[i];
+                
+                node.className = 'flex-1 min-w-[200px] max-w-[280px] bg-yellow-950/20 border-2 border-yellow-500 text-yellow-400 rounded-xl p-4 shadow-md transition-all duration-500 text-xs font-medium flex flex-col justify-between h-24 animate-pulse shadow-yellow-950/50';
+                
+                try {
+                    const response = await fetch('/api/workflows/execute-step', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+                        body: stepText
+                    });
+
+                    if (response.ok) {
+                        node.className = 'flex-1 min-w-[200px] max-w-[280px] bg-green-950/20 border-2 border-green-500 text-green-400 rounded-xl p-4 shadow-md transition-all duration-500 text-xs font-medium flex flex-col justify-between h-24 shadow-green-950/50';
+                        if (i < currentActiveSteps.length - 1) {
+                            document.getElementById(`edge-${i}`).className = 'text-green-500 text-xl font-bold rotate-90 md:rotate-0 transition-colors duration-500 my-1 md:my-0 drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]';
+                        }
+                    } else {
+                        throw new Error("Ajan adım yürütmede başarısız.");
+                    }
+                } catch (error) {
+                    node.className = 'flex-1 min-w-[200px] max-w-[280px] bg-red-950/20 border-2 border-red-500 text-red-400 rounded-xl p-4 shadow-md transition-all duration-500 text-xs font-medium flex flex-col justify-between h-24 shadow-red-950/50';
+                    if (i < currentActiveSteps.length - 1) {
+                        document.getElementById(`edge-${i}`).className = 'text-red-500 text-xl font-bold rotate-90 md:rotate-0 transition-colors duration-500 my-1 md:my-0';
+                    }
+                    break;
+                }
+            }
+
+            runBtn.disabled = false;
+            selector.disabled = false;
+        }
+
+        // ==================== YENİ: DİNAMİK FORM JS FONKSİYONLARI ====================
+        function addNewStepRow() {
+            const container = document.getElementById('dynamic-steps-container');
+            const currentRows = container.getElementsByClassName('step-row').length;
+            
+            const row = document.createElement('div');
+            row.className = 'flex gap-2 step-row mt-2';
+            row.innerHTML = `
+                <span class="bg-gray-900 text-gray-400 border border-gray-700 px-3 py-2 rounded-lg text-sm font-bold flex items-center justify-center min-w-[40px]">${currentRows + 1}</span>
+                <input type="text" required placeholder="Sonraki ajan talimatını yazın..." 
+                       class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 workflow-step-input">
+                <button type="button" onclick="removeStepRow(this)" class="bg-red-900/20 hover:bg-red-900/40 text-red-400 font-bold px-3.5 rounded-lg text-sm transition cursor-pointer">✕</button>
+            `;
+            container.appendChild(row);
+            reIndexStepNumbers();
+        }
+
+        function removeStepRow(button) {
+            const container = document.getElementById('dynamic-steps-container');
+            if (container.getElementsByClassName('step-row').length > 1) {
+                button.closest('.step-row').remove();
+                reIndexStepNumbers();
+            } else {
+                alert('Bir iş akışı en az 1 adımdan oluşmalıdır!');
+            }
+        }
+
+        function reIndexStepNumbers() {
+            const rows = document.getElementById('dynamic-steps-container').getElementsByClassName('step-row');
+            for (let i = 0; i < rows.length; i++) {
+                rows[i].querySelector('span').textContent = i + 1;
+            }
+        }
+
+        async function createNewWorkflow(event) {
+            event.preventDefault();
+            
+            const nameInput = document.getElementById('workflow-name-input');
+            const stepInputs = document.getElementsByClassName('workflow-step-input');
+            
+            const workflowName = nameInput.value.trim();
+            const steps = [];
+            
+            for (let input of stepInputs) {
+                if (input.value.trim()) {
+                    steps.push(input.value.trim());
+                }
+            }
+
+            try {
+                const response = await fetch(WORKFLOWS_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ workflowName: workflowName, steps: steps })
+                });
+
+                if (response.ok) {
+                    alert('İş akışı başarıyla veritabanına kaydedildi!');
+                    
+                    document.getElementById('create-workflow-form').reset();
+                    const container = document.getElementById('dynamic-steps-container');
+                    container.innerHTML = `
+                        <div class="flex gap-2 step-row">
+                            <span class="bg-gray-900 text-gray-400 border border-gray-700 px-3 py-2 rounded-lg text-sm font-bold flex items-center justify-center min-w-[40px]">1</span>
+                            <input type="text" required placeholder="Örn: Grafana üzerinden sistemin anlık CPU durumunu analiz et." 
+                                   class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 workflow-step-input">
+                            <button type="button" onclick="removeStepRow(this)" class="bg-red-900/20 hover:bg-red-900/40 text-red-400 font-bold px-3.5 rounded-lg text-sm transition cursor-pointer">✕</button>
+                        </div>
+                    `;
+                    
+                    // Dropdown listesini sayfayı yenilemeden güncelle
+                    await fetchWorkflows();
+                } else {
+                    alert('İş akışı kaydedilemedi! (HTTP ' + response.status + ')');
+                }
+            } catch (error) {
+                console.error('Workflow kaydetme hatası:', error);
+                alert('Ağ hatası oluştu!');
+            }
+        }
+        // =============================================================================
+
         function renderServers(servers) {
             const grid = document.getElementById('servers-grid');
-            
-            // Eğer şu an açık bir düzenleme formu varsa, listenin yenilenmesi kullanıcının yazdığı yazıyı silmesin diye koruma sağlıyoruz
             const activeInputs = document.querySelectorAll('div[id^="edit-form-"]:not(.hidden)');
-            if (activeInputs.length > 0) {
-                return; // Eğer kullanıcı o an bir şey düzenliyorsa kartları baştan çizme, rahat rahat yazsın
-            }
+            if (activeInputs.length > 0) return; 
 
             grid.innerHTML = ''; 
 
+            if (servers.length === 0) {
+                grid.innerHTML = '<p class="text-center col-span-full text-gray-500 py-8">Kayıtlı sunucu bulunamadı. Yukarıdaki formdan ekleyebilirsiniz.</p>';
+                return;
+            }
+
             servers.forEach(server => {
                 const isUp = server.status === 'UP';
-                const statusColor = isUp ? 'bg-green-500' : 'bg-red-500';
+                const statusColor = server.status === 'UP' ? 'bg-green-500' : (server.status === 'DOWN' ? 'bg-red-500' : 'bg-yellow-500');
                 const statusText = server.status || 'UNKNOWN';
                 const lastCheckedStr = server.lastChecked ? new Date(server.lastChecked).toLocaleTimeString() : 'Kontrol edilmedi';
+                const displayName = server.serverName || `Sunucu #${server.id}`;
 
                 const card = document.createElement('div');
                 card.className = `bg-gray-800 rounded-xl p-6 shadow-lg border-t-4 ${isUp ? 'border-green-500' : 'border-red-500'} flex flex-col justify-between transition-all duration-300 hover:scale-105`;
@@ -60,36 +370,28 @@
                 card.innerHTML = `
                     <div>
                         <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold text-white">Sunucu #${server.id}</h3>
+                            <h3 class="text-xl font-bold text-white truncate max-w-[160px]" title="${displayName}">${displayName}</h3>
                             <span class="flex items-center text-sm font-semibold px-2.5 py-0.5 rounded-full ${isUp ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}">
                                 <span class="w-2 h-2 rounded-full ${statusColor} mr-2"></span>
                                 ${statusText}
                             </span>
                         </div>
-                        
                         <div class="space-y-2 text-sm text-gray-300">
+                            <p><span class="text-gray-500 font-medium">ID:</span> <code class="text-gray-400 bg-gray-900 px-1 rounded">${server.id}</code></p>
                             <p><span class="text-gray-500 font-medium">Mevcut URL:</span> <br><code class="text-indigo-300 bg-gray-900 px-1.5 py-0.5 rounded break-all">${server.endpointUrl || 'Boş'}</code></p>
                             <p><span class="text-gray-500 font-medium">Son Kontrol:</span> ${lastCheckedStr}</p>
                         </div>
                     </div>
-
-                    <!-- Düzenleme Alanı -->
                     <div class="mt-6 pt-4 border-t border-gray-700">
-                        <!-- ID eşleşmesi hatasız hale getirildi -->
-                        <button onclick="toggleEdit(${server.id})" id="edit-btn-${server.id}" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition text-sm">
+                        <button onclick="toggleEdit(${server.id})" id="edit-btn-${server.id}" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition text-sm cursor-pointer">
                             Düzenle
                         </button>
-                        
                         <div id="edit-form-${server.id}" class="hidden mt-3 space-y-2">
                             <input type="text" id="input-${server.id}" value="${server.endpointUrl || ''}" 
                                    class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
                             <div class="flex gap-2">
-                                <button onclick="saveUrl(${server.id})" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition">
-                                    Kaydet
-                                </button>
-                                <button onclick="toggleEdit(${server.id})" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition">
-                                    İptal
-                                </button>
+                                <button onclick="saveUrl(${server.id})" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition cursor-pointer">Kaydet</button>
+                                <button onclick="toggleEdit(${server.id})" class="bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1.5 px-3 rounded-md text-xs transition cursor-pointer">İptal</button>
                             </div>
                         </div>
                     </div>
@@ -98,29 +400,50 @@
             });
         }
 
-        // Düzenle formunu açıp kapatan fonksiyon (Buton görünürlüğünü kesinleştirildi)
+        async function createServer(event) {
+            event.preventDefault(); 
+            const nameInput = document.getElementById('create-name');
+            const urlInput = document.getElementById('create-url');
+            const serverName = nameInput.value.trim();
+            const endpointUrl = urlInput.value.trim();
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serverName: serverName, endpointUrl: endpointUrl })
+                });
+
+                if (response.ok) {
+                    document.getElementById('create-server-form').reset();
+                    await fetchServers();
+                } else {
+                    alert('Sunucu eklenemedi! (HTTP ' + response.status + ')');
+                }
+            } catch (error) {
+                console.error('Ekleme hatası:', error);
+                alert('Ağ hatası oluştu!');
+            }
+        }
+
         function toggleEdit(id) {
             const form = document.getElementById(`edit-form-${id}`);
             const btn = document.getElementById(`edit-btn-${id}`);
-            
             if (form && btn) {
                 form.classList.toggle('hidden');
                 btn.classList.toggle('hidden');
             }
         }
 
-        // Yeni URL'i backend'e gönderen asenkron fonksiyon
         async function saveUrl(id) {
             const input = document.getElementById(`input-${id}`);
             const newUrl = input.value.trim();
-
             if (!newUrl) {
                 alert('Lütfen geçerli bir URL girin!');
                 return;
             }
 
             try {
-                // Sayfa yenilenmeden backend API (PUT) isteği atılıyor
                 const response = await fetch(`${API_URL}/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -128,7 +451,6 @@
                 });
 
                 if (response.ok) {
-                    // Formu kapat, DOM'u zorla temizle ve yeni verileri çek
                     toggleEdit(id);
                     await fetchServers();
                 } else {
@@ -140,10 +462,62 @@
             }
         }
 
-        // Sayfa açıldığında ilk verileri yükle
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendAgentMessage();
+            }
+        }
+
+        async function sendAgentMessage() {
+            const inputEl = document.getElementById('user-input');
+            const chatBox = document.getElementById('chat-box');
+            const query = inputEl.value.trim();
+
+            if (!query) return;
+
+            appendMessageBubble(query, true);
+            inputEl.value = ''; 
+
+            const loadingBubble = appendMessageBubble('Ajan sunucu yeteneklerini analiz ediyor...', false);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch(AGENT_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: query
+                });
+
+                if (!response.ok) throw new Error('Ajan yanıt veremedi.');
+                const replyText = await response.text();
+                loadingBubble.innerText = replyText;
+
+            } catch (error) {
+                loadingBubble.style.color = '#f87171';
+                loadingBubble.innerText = 'Hata: Ajan katmanına erişilemedi. Spring Boot backend servisinin ayakta olduğundan emin olun.';
+            }
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function appendMessageBubble(text, isUser) {
+            const chatBox = document.getElementById('chat-box');
+            const wrapper = document.createElement('div');
+            wrapper.className = isUser ? 'flex justify-end' : 'flex justify-start max-w-[85%]';
+            
+            const bubble = document.createElement('div');
+            bubble.className = isUser 
+                ? 'bg-indigo-600 text-white rounded-xl rounded-tr-none px-4 py-2.5 text-sm shadow-md font-medium'
+                : 'bg-gray-700 text-gray-100 rounded-xl rounded-tl-none px-4 py-2.5 text-sm shadow-md whitespace-pre-line';
+            
+            bubble.innerText = text;
+            wrapper.appendChild(bubble);
+            chatBox.appendChild(wrapper);
+            return bubble;
+        }
+
         fetchServers();
-        
-        // Her 4 saniyede bir arka planda durumları kontrol et
+        fetchWorkflows();
         setInterval(fetchServers, 4000);
     </script>
 </body>
